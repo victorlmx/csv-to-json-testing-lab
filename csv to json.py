@@ -8,7 +8,6 @@
 
 import csv
 import json
-from collections import defaultdict
 
 str_animals= "Animal and Samples"
 str_livestock = "Livestock - Domestic Species"
@@ -51,7 +50,7 @@ def observationGroup(list):
         observations[id] = {}
     return id
 
-def removeKnownInfo(list):
+def removeKnownData(list):
     list.pop("Observation Group")
     list.pop("Observation Category 0")
 
@@ -67,6 +66,7 @@ def addSubCategoryToObservation(observationGroup, category_name, item_id, items 
 
 def buildCategoryStructure(category_name, list, sub_category_id_column=None):
     print("Building json for ", category_name, ":")
+
     sub_categories = {} #subcategories, names and items.
     listCategoryNames = {} #names only, e.g., Species wildlife 1 event 1
     animals_observed_per_species = {} #information about juvenile healthy, sick, dead, etc.
@@ -109,6 +109,7 @@ def buildCategoryStructure(category_name, list, sub_category_id_column=None):
 
     for item in list:
         observation_group = observationGroup(item)
+        
         if (category_name == str_general or category_name ==str_site):
             addCategoryInfo(observation_group,category_name, item)
 
