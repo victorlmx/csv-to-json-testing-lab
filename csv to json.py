@@ -1,10 +1,7 @@
 #Known issues:
 #There is no clear way of identifying the different wildlife entries. e.g., "Wildlife 2"
 #There is no clear way of identifying the different livestock entries.
-
 #note try &includeuuids=true
-
-#TO-DO: Generate Animal Sample Records
 
 import csv
 import json
@@ -51,19 +48,10 @@ def observationGroup(list):
     return id
 
 def addCategoryInfo(id, category_name, list):
-    print("-- processing observation", id, ", waypoint", list["Waypoint ID"])
     list.pop("Observation Group")
     observations[id][category_name]=list
 
-def addSubCategoryToObservation(observationGroup, category_name, item_id, item ): ######################
-    item.pop("Observation Group")
-    if (category_name in observations[observationGroup]):
-        observations[observationGroup][category_name][item_id]=item
-    else: 
-        observations[observationGroup][category_name] = {item_id: item}
-
 def buildCategoryStructure(category_name, list, sub_category_id_column=None):
-    print("Building json for ", category_name, ":")
     sub_categories = {} #subcategories, names and items.
     listCategoryNames = {} #names only, e.g., Species wildlife 1 event 1
     animals_observed_per_species = {} #information about juvenile healthy, sick, dead, etc.
@@ -76,8 +64,19 @@ def buildCategoryStructure(category_name, list, sub_category_id_column=None):
 
     def addSubCategoryInfo():
         if (category_name == str_animals):
-            addSampleRecord()
-            sub_categories[sub_category_id]=item
+            if (len(item["Sample ID"]) > 0):
+                sampleRecord = getSampleRecord()
+                if (len(sub_categories[sub_category_id]) == 0):
+                    item["Records"]=[sampleRecord]
+                    sub_categories[sub_category_id]=item
+                else:
+                    sub_categories[sub_category_id]["Records"].append(sampleRecord)
+            else:
+                sub_categories[sub_category_id]=item
+            item.pop("Sample Type")
+            item.pop("Collected from Environment")
+            item.pop("Notes")
+            item.pop("Sample ID")
 
         if (boolWildlifeOrLivestock):
             animals_observed_per_species_item={}
@@ -89,7 +88,6 @@ def buildCategoryStructure(category_name, list, sub_category_id_column=None):
             item.pop("Number Dead")
             item.pop("Number Healthy")
             item.pop("Number Sick or Injured")
-            #append animals_observed_per_species to the list that will ultimately be assigned to the subcategory (e.g., "Widlife 1" or "Wildlife 2") outside of the for loop.
             if listCategoryNames[sub_category_id] in animals_observed_per_species:
                 animals_observed_per_species[listCategoryNames[sub_category_id]]["Animals Observed Per Species"].append(animals_observed_per_species_item)
             else:
@@ -97,24 +95,27 @@ def buildCategoryStructure(category_name, list, sub_category_id_column=None):
                 animals_observed_per_species[listCategoryNames[sub_category_id]]["Animals Observed Per Species"].append(animals_observed_per_species_item)
             sub_categories[sub_category_id]=item
 
-    def addSampleRecord():
-        if (len(item["Sample ID"]) > 0):
-            record = {}
-            record = {"Sample ID": item["Sample ID"], "Sample Type" : item["Sample Type"], "Collected from Environment" : item["Collected from Environment"], "Notes" : item["Notes"]}
-            item.pop("Sample Type")
-            item.pop("Collected from Environment")
-            item.pop("Notes")
-            item.pop("Sample ID")
-            item["Record"] = record
-            
+    def getSampleRecord():
+        record = {}
+        record = {"Sample ID": item["Sample ID"], "Sample Type" : item["Sample Type"], "Collected from Environment" : item["Collected from Environment"], "Notes" : item["Notes"]}
+        return record
+    
+    def addSubCategoryToObservation(observationGroup, subCategory, sub_category_id):
+        if (category_name in observations[observationGroup]):
+            observations[observationGroup][category_name][sub_category_id]=subCategory
+        else: 
+            observations[observationGroup][category_name] = {sub_category_id: subCategory}      
+
     def addSubCategoryToObservations():
         if (boolWildlifeOrLivestock or category_name == str_animals):    
             n = 0    
-            for idx, item in sub_categories.items():
+            for idx, sub_category in sub_categories.items():
                 n += 1
                 if (boolWildlifeOrLivestock):
-                    item["Animals Observed Per Species"]=animals_observed_per_species[n]["Animals Observed Per Species"]
-                addSubCategoryToObservation(item["Observation Group"], category_name, idx, item)
+                    sub_category["Animals Observed Per Species"]=animals_observed_per_species[n]["Animals Observed Per Species"]
+                groupId = sub_category["Observation Group"]
+                sub_category.pop("Observation Group")
+                addSubCategoryToObservation(groupId, sub_category, idx)
 
     for item in list:
         observation_group = observationGroup(item)
@@ -124,7 +125,6 @@ def buildCategoryStructure(category_name, list, sub_category_id_column=None):
             addCategoryInfo(observation_group,category_name, item)
 
         if (boolWildlifeOrLivestock or category_name == str_animals):
-            print("-- processing observation", observation_group, ", ID:", item[sub_category_id_column])
             sub_category_id = item[sub_category_id_column]
             buildListCategories(sub_category_id)
             addSubCategoryInfo()
@@ -133,5 +133,4 @@ def buildCategoryStructure(category_name, list, sub_category_id_column=None):
     
 readCSVs()
 buildStructure()
-print("==================Complete JSON Below==================")
 print(json.dumps(observations))
