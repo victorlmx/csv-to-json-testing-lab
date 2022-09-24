@@ -87,7 +87,9 @@ def buildCategoryStructure(category_name, list, sub_category_id_column=None):
     sub_categories = {} #subcategories, names and items.
     listCategoryNames = {} #names only, e.g., Species wildlife 1 event 1
     animals_observed_per_species = {} #information about juvenile healthy, sick, dead, etc.
-    
+    boolWildlifeOrLivestock = category_name == str_livestock or category_name ==str_wildlife 
+
+
     print("Building json for ", category_name, ":")
 
     for item in list:
@@ -95,7 +97,7 @@ def buildCategoryStructure(category_name, list, sub_category_id_column=None):
         if (category_name == str_general or category_name ==str_site):
             addCategoryInfo(observation_group,category_name, item)
         
-        if (category_name == str_livestock or category_name ==str_wildlife or category_name == str_animals):
+        if (boolWildlifeOrLivestock or category_name == str_animals):
             print("-- processing observation", observation_group, ", ID:", item[sub_category_id_column])
             animals_observed_per_species_item={}
 
@@ -106,7 +108,7 @@ def buildCategoryStructure(category_name, list, sub_category_id_column=None):
             sub_categories[sub_category_id]=item
             #addSubCategoryInfo(observation_group, category_name, sub_categories)
 
-        if (category_name == str_livestock or category_name ==str_wildlife):
+        if (boolWildlifeOrLivestock):
             #REQ: Group Wildlife and Livestock items by "Animals Observed per Species"
             #Generate something like 
             #{
@@ -133,14 +135,13 @@ def buildCategoryStructure(category_name, list, sub_category_id_column=None):
             sub_categories[sub_category_id]=item
 
     #add the multiple animals_observed_per_species to the subcategory.
-    if (category_name == str_livestock or category_name ==str_wildlife or category_name == str_animals):
+    if (boolWildlifeOrLivestock or category_name == str_animals):    
+        n = 0    
         for idx, sub_category in sub_categories.items():
+            n += 1
+            if (boolWildlifeOrLivestock):
+                sub_category["Animals Observed Per Species"]=animals_observed_per_species[n]["Animals Observed Per Species"]
             addSubCategoryInfo(sub_category["Observation Group"], category_name, idx, sub_category)
-            #sub_category["Animals Observed Per Species"]=animals_observed_per_species[idx+1]["Animals Observed Per Species"]
-
-        #for idx, sub_category in enumerate(sub_categories.values()):
-        #    sub_category["Animals Observed Per Species"]=animals_observed_per_species[idx+1]["Animals Observed Per Species"]
-        #addSubCategoryInfo(observation_group, category_name, sub_categories)
 
 readCSVs()
 buildStructure()
